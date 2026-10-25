@@ -1,4 +1,3 @@
-
 package com.jvc.diagnostic;
 
 import android.app.Activity;
@@ -72,6 +71,12 @@ public class MainActivity extends Activity {
         s.append("Model: ").append(Build.MODEL).append("\n");
         s.append("Device: ").append(Build.DEVICE).append("\n");
         s.append("Product: ").append(Build.PRODUCT).append("\n");
+        s.append("Board: ").append(Build.BOARD).append("\n");
+        s.append("Hardware: ").append(Build.HARDWARE).append("\n");
+        s.append("Display: ").append(Build.DISPLAY).append("\n");
+        s.append("Bootloader: ").append(Build.BOOTLOADER).append("\n");
+        s.append("Build Type: ").append(Build.TYPE).append("\n");
+        s.append("Build Tags: ").append(Build.TAGS).append("\n");
         s.append("Android: ").append(Build.VERSION.RELEASE).append("\n");
         s.append("SDK: ").append(Build.VERSION.SDK_INT).append("\n");
         s.append("Build ID: ").append(Build.ID).append("\n");
