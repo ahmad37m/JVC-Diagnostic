@@ -365,6 +365,9 @@ public class MainActivity extends Activity {
             add(s, "getprop error", e.toString());
         }
 
+        section(s, "UPDATE AND RECOVERY - READ ONLY");
+        addUpdateRecoveryInfo(s);
+
         section(s, "LIMITATIONS");
         s.append("تطبيق عادي؛ قد يمنع Android قراءة بعض الملفات أو تفاصيل الأجهزة.\n");
         s.append("جداول المنافذ قد تكون محجوبة، وقد لا تتوفر ملكية العملية.\n");
@@ -551,5 +554,98 @@ public class MainActivity extends Activity {
 
         s.append("ملاحظة: هذه المعلومات لا تثبت توافق نظام بديل ")
                 .append("مع التلفزيون.\n");
+    }
+
+    private void addUpdateRecoveryInfo(StringBuilder s) {
+        s.append("فحص قراءة فقط؛ لا يتم تنفيذ تحديث أو استرداد.\n");
+
+        // خصائص النظام المرتبطة بالتحديث والإقلاع
+        try {
+            Process p = Runtime.getRuntime().exec("getprop");
+            BufferedReader r = new BufferedReader(
+                    new InputStreamReader(
+                            p.getInputStream(),
+                            StandardCharsets.UTF_8));
+
+            String line;
+            int count = 0;
+
+            while ((line = r.readLine()) != null && count < 100) {
+                String lower = line.toLowerCase(Locale.US);
+
+                if ((lower.contains("ota")
+                        || lower.contains("recovery")
+                        || lower.contains("update")
+                        || lower.contains("slot_suffix")
+                        || lower.contains("ab_update"))
+                        && !lower.contains("serial")) {
+                    s.append(line).append("\n");
+                    count++;
+                }
+            }
+
+            r.close();
+            p.destroy();
+
+            add(s, "Update-related properties", count);
+        } catch (Exception e) {
+            add(s, "Update properties error",
+                    e.getClass().getSimpleName());
+        }
+
+        // التطبيقات التي قد ترتبط بالتحديث أو الاسترداد
+        try {
+            PackageManager pm = getPackageManager();
+            List<PackageInfo> packages = pm.getInstalledPackages(0);
+            int found = 0;
+
+            for (PackageInfo pi : packages) {
+                String name = pi.packageName.toLowerCase(Locale.US);
+
+                if (name.contains("update")
+                        || name.contains("recovery")
+                        || name.contains("firmware")
+                        || name.contains("ota")
+                        || name.contains("upgrade")) {
+
+                    s.append("- package=").append(pi.packageName)
+                            .append(" | version=")
+                            .append(pi.versionName == null
+                                    ? "unknown" : pi.versionName)
+                            .append("\n");
+                    found++;
+                }
+            }
+
+            add(s, "Matching installed packages", found);
+        } catch (Exception e) {
+            add(s, "Package inspection error",
+                    e.getClass().getSimpleName());
+        }
+
+        // فحص وجود الملفات فقط، دون قراءتها أو تشغيلها
+        String[] paths = {
+            "/system/bin/recovery",
+            "/system/bin/update_engine",
+            "/system/bin/install-recovery.sh",
+            "/system/recovery-from-boot.p",
+            "/system/etc/security/otacerts.zip",
+            "/cache/recovery/command",
+            "/cache/recovery/last_log"
+        };
+
+        for (String path : paths) {
+            try {
+                File f = new File(path);
+                add(s, path,
+                        "exists=" + f.exists()
+                        + ", readable=" + f.canRead());
+            } catch (Exception e) {
+                add(s, path, "غير متاح");
+            }
+        }
+
+        s.append("ملاحظة: وجود الملفات أو التطبيقات لا يثبت ")
+                .append("أن التحديث متاح أو متوافق مع هذا التلفزيون.\n");
     }
 }
