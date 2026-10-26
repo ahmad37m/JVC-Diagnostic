@@ -7,6 +7,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.ConfigurationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -504,7 +505,7 @@ public class MainActivity extends Activity {
             ActivityManager am = (ActivityManager)
                     getSystemService(ACTIVITY_SERVICE);
 
-            ActivityManager.ConfigurationInfo config =
+            ConfigurationInfo config =
                     am.getDeviceConfigurationInfo();
 
             if (config != null) {
