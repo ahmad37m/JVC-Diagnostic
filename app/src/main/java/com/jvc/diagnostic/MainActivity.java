@@ -213,6 +213,9 @@ public class MainActivity extends Activity {
         add(s, "/proc/version", readFile("/proc/version", 30));
         add(s, "/proc/cpuinfo", readFile("/proc/cpuinfo", 160));
 
+        // تم تصحيح هذا الجزء بحيث يتم استدعاء الدالة مباشرة دون تكرار العنوان
+        addCompatibilityInfo(s);
+
         section(s, "SENSORS");
         try {
             SensorManager sm = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -488,5 +491,64 @@ public class MainActivity extends Activity {
         i.putExtra(Intent.EXTRA_SUBJECT, "JVC Diagnostic Report");
         i.putExtra(Intent.EXTRA_TEXT, report);
         startActivity(Intent.createChooser(i, "مشاركة تقرير JVC"));
+    }
+
+    private void addCompatibilityInfo(StringBuilder s) {
+        section(s, "ANDROID COMPATIBILITY");
+
+        add(s, "Android SDK", Build.VERSION.SDK_INT);
+        add(s, "Android release", Build.VERSION.RELEASE);
+        add(s, "Supported ABIs", join(Build.SUPPORTED_ABIS));
+
+        try {
+            ActivityManager am = (ActivityManager)
+                    getSystemService(ACTIVITY_SERVICE);
+
+            ActivityManager.ConfigurationInfo config =
+                    am.getDeviceConfigurationInfo();
+
+            if (config != null) {
+                add(s, "OpenGL ES version", config.getGlEsVersion());
+                add(s, "OpenGL ES required by app",
+                        config.reqGlEsVersion);
+            }
+        } catch (Exception e) {
+            add(s, "Graphics compatibility",
+                    "غير متاح: " + e.getClass().getSimpleName());
+        }
+
+        try {
+            PackageManager pm = getPackageManager();
+
+            add(s, "Touchscreen feature",
+                    pm.hasSystemFeature(
+                            PackageManager.FEATURE_TOUCHSCREEN));
+
+            add(s, "Wi-Fi feature",
+                    pm.hasSystemFeature(
+                            PackageManager.FEATURE_WIFI));
+
+            add(s, "Ethernet feature",
+                    pm.hasSystemFeature(
+                            PackageManager.FEATURE_ETHERNET));
+
+            add(s, "Leanback TV feature",
+                    pm.hasSystemFeature(
+                            PackageManager.FEATURE_LEANBACK));
+
+            add(s, "Low RAM device",
+                    pm.hasSystemFeature(
+                            PackageManager.FEATURE_RAM_LOW));
+
+            add(s, "Available system features",
+                    pm.getSystemAvailableFeatures().length);
+
+        } catch (Exception e) {
+            add(s, "System features",
+                    "غير متاح: " + e.getClass().getSimpleName());
+        }
+
+        s.append("ملاحظة: هذه المعلومات لا تثبت توافق نظام بديل ")
+                .append("مع التلفزيون.\n");
     }
 }
