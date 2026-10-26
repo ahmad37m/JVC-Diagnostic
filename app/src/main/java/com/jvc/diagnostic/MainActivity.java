@@ -71,18 +71,17 @@ public class MainActivity extends Activity {
 
         ScrollView scroll = new ScrollView(this);
         scroll.addView(reportView);
-        root.addView(scroll, new LinearLayout.LayoutParams(
-                -1, 0, 1));
+        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
         addButton(root, "تحديث التقرير", v -> refreshReport());
+
         addButton(root, "نسخ التقرير", v -> {
             ClipboardManager cb = (ClipboardManager)
                     getSystemService(Context.CLIPBOARD_SERVICE);
-            cb.setPrimaryClip(ClipData.newPlainText(
-                    "JVC Report", report));
-            Toast.makeText(this, "تم نسخ التقرير",
-                    Toast.LENGTH_SHORT).show();
+            cb.setPrimaryClip(ClipData.newPlainText("JVC Report", report));
+            Toast.makeText(this, "تم نسخ التقرير", Toast.LENGTH_SHORT).show();
         });
+
         addButton(root, "حفظ التقرير TXT", v -> saveReport());
         addButton(root, "مشاركة التقرير", v -> shareReport());
 
@@ -99,15 +98,37 @@ public class MainActivity extends Activity {
     }
 
     private void refreshReport() {
-        report = buildReport();
+        report = sanitizeReport(buildReport());
         reportView.setText(report);
-        Toast.makeText(this, "تم تحديث التقرير",
-                Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "تم تحديث التقرير", Toast.LENGTH_SHORT).show();
+    }
+
+    /*
+     * إزالة الرقم التسلسلي وأي قيمة مطابقة له من التقرير كله.
+     * لا يغيّر الرقم التسلسلي في النظام نفسه.
+     */
+    private String sanitizeReport(String text) {
+        String result = text;
+
+        try {
+            String serial = Build.getSerial();
+            if (serial != null && !serial.isEmpty()
+                    && !"unknown".equalsIgnoreCase(serial)) {
+                result = result.replace(serial, "[HIDDEN]");
+            }
+        } catch (SecurityException ignored) {
+            // لا يحتاج التطبيق إلى صلاحية خاصة لعرض التقرير.
+        } catch (Exception ignored) { }
+
+        result = result.replaceAll(
+                "(?im)^\\s*\\[?ro\\.boot\\.serialno\\]?\\s*:\\s*\\[?[^\\]\\r\\n]*\\]?\\s*$",
+                "[ro.boot.serialno]: [HIDDEN]");
+
+        return result;
     }
 
     private void section(StringBuilder s, String name) {
-        s.append("\n\n========== ").append(name)
-                .append(" ==========\n");
+        s.append("\n\n========== ").append(name).append(" ==========\n");
     }
 
     private void add(StringBuilder s, String key, Object value) {
@@ -125,6 +146,7 @@ public class MainActivity extends Activity {
                         "yyyy-MM-dd HH:mm:ss", Locale.US)
                         .format(new Date())).append("\n");
         s.append("النطاق: شاشة التلفزيون فقط\n");
+        s.append("الرقم التسلسلي: مخفي من التقرير\n");
 
         section(s, "DEVICE AND ANDROID");
         add(s, "Manufacturer", Build.MANUFACTURER);
@@ -146,8 +168,7 @@ public class MainActivity extends Activity {
 
         section(s, "DISPLAY");
         try {
-            WindowManager wm =
-                    (WindowManager) getSystemService(WINDOW_SERVICE);
+            WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
             Display d = wm.getDefaultDisplay();
             DisplayMetrics m = new DisplayMetrics();
             Point p = new Point();
@@ -164,15 +185,14 @@ public class MainActivity extends Activity {
 
         section(s, "RAM");
         try {
-            ActivityManager am =
-                    (ActivityManager) getSystemService(ACTIVITY_SERVICE);
-            ActivityManager.MemoryInfo mi =
-                    new ActivityManager.MemoryInfo();
+            ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+            ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
             am.getMemoryInfo(mi);
             add(s, "Total RAM", bytes(mi.totalMem));
             add(s, "Available RAM", bytes(mi.availMem));
             add(s, "Low memory", mi.lowMemory);
             add(s, "Low memory threshold", bytes(mi.threshold));
+            add(s, "/proc/meminfo", readFile("/proc/meminfo", 80));
         } catch (Exception e) {
             add(s, "RAM error", e.toString());
         }
@@ -180,12 +200,16 @@ public class MainActivity extends Activity {
         section(s, "STORAGE");
         storage(s, "Data", Environment.getDataDirectory());
         storage(s, "System", Environment.getRootDirectory());
-        storage(s, "Shared storage",
-                Environment.getExternalStorageDirectory());
+        storage(s, "Shared storage", Environment.getExternalStorageDirectory());
+
+        section(s, "PARTITIONS AND MOUNTS");
+        add(s, "/proc/partitions", readFile("/proc/partitions", 200));
+        add(s, "/proc/mounts", readFile("/proc/mounts", 250));
+        add(s, "/proc/mtd", readFile("/proc/mtd", 100));
+        add(s, "/proc/cmdline", readFile("/proc/cmdline", 20));
 
         section(s, "CPU AND KERNEL");
-        add(s, "Available processors",
-                Runtime.getRuntime().availableProcessors());
+        add(s, "Available processors", Runtime.getRuntime().availableProcessors());
         add(s, "Java VM", System.getProperty("java.vm.name"));
         add(s, "OS version", System.getProperty("os.version"));
         add(s, "/proc/version", readFile("/proc/version", 30));
@@ -193,8 +217,7 @@ public class MainActivity extends Activity {
 
         section(s, "SENSORS");
         try {
-            SensorManager sm =
-                    (SensorManager) getSystemService(SENSOR_SERVICE);
+            SensorManager sm = (SensorManager) getSystemService(SENSOR_SERVICE);
             List<Sensor> sensors = sm.getSensorList(Sensor.TYPE_ALL);
             add(s, "Sensor count", sensors.size());
             for (Sensor sensor : sensors) {
@@ -232,8 +255,8 @@ public class MainActivity extends Activity {
                         .append(" | package=").append(pkg)
                         .append(" | type=").append(type)
                         .append(" | version=").append(version)
-                        .append(" | activity=")
-                        .append(r.activityInfo.name).append("\n");
+                        .append(" | activity=").append(r.activityInfo.name)
+                        .append("\n");
             }
         } catch (Exception e) {
             add(s, "App list error", e.toString());
@@ -247,8 +270,7 @@ public class MainActivity extends Activity {
             List<ResolveInfo> homes = pm.queryIntentActivities(i, 0);
             for (ResolveInfo r : homes) {
                 s.append("- ").append(r.activityInfo.packageName)
-                        .append("/")
-                        .append(r.activityInfo.name).append("\n");
+                        .append("/").append(r.activityInfo.name).append("\n");
             }
         } catch (Exception e) {
             add(s, "HOME query error", e.toString());
@@ -263,10 +285,8 @@ public class MainActivity extends Activity {
                         .append(" | loopback=").append(ni.isLoopback())
                         .append(" | mtu=").append(ni.getMTU()).append("\n");
 
-                for (InetAddress a :
-                        Collections.list(ni.getInetAddresses())) {
-                    s.append("  Address: ").append(a.getHostAddress())
-                            .append("\n");
+                for (InetAddress a : Collections.list(ni.getInetAddresses())) {
+                    s.append("  Address: ").append(a.getHostAddress()).append("\n");
                 }
             }
         } catch (Exception e) {
@@ -287,11 +307,9 @@ public class MainActivity extends Activity {
                     add(s, "Ethernet transport",
                             c.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
                     add(s, "Internet capability",
-                            c.hasCapability(
-                                    NetworkCapabilities.NET_CAPABILITY_INTERNET));
+                            c.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET));
                     add(s, "Validated internet",
-                            c.hasCapability(
-                                    NetworkCapabilities.NET_CAPABILITY_VALIDATED));
+                            c.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED));
                 }
                 LinkProperties lp = cm.getLinkProperties(active);
                 if (lp != null) {
@@ -316,12 +334,19 @@ public class MainActivity extends Activity {
         try {
             Process p = Runtime.getRuntime().exec("getprop");
             BufferedReader r = new BufferedReader(
-                    new InputStreamReader(p.getInputStream(),
-                            StandardCharsets.UTF_8));
+                    new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
             String line;
             int count = 0;
             while ((line = r.readLine()) != null && count < 600) {
                 String l = line.toLowerCase(Locale.US);
+
+                // تجاهل خاصية الرقم التسلسلي بشكل صريح.
+                if (l.contains("ro.boot.serialno")
+                        || l.contains("serialno")
+                        || l.contains("serial_number")) {
+                    continue;
+                }
+
                 if (l.contains("ro.product") || l.contains("ro.build")
                         || l.contains("ro.hardware") || l.contains("ro.board")
                         || l.contains("ro.boot") || l.contains("ro.mediatek")
@@ -382,8 +407,7 @@ public class MainActivity extends Activity {
             File f = new File(path);
             if (!f.canRead()) return "Permission denied";
             BufferedReader r = new BufferedReader(
-                    new InputStreamReader(new FileInputStream(f),
-                            StandardCharsets.UTF_8));
+                    new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8));
             StringBuilder b = new StringBuilder();
             String line;
             int n = 0;
@@ -405,8 +429,7 @@ public class MainActivity extends Activity {
                 return;
             }
             BufferedReader r = new BufferedReader(
-                    new InputStreamReader(new FileInputStream(f),
-                            StandardCharsets.UTF_8));
+                    new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8));
             String line;
             int n = 0;
             while ((line = r.readLine()) != null && n++ < 250) {
