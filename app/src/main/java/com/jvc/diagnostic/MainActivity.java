@@ -1,4 +1,3 @@
-
 package com.jvc.diagnostic;
 
 import android.app.Activity;
@@ -108,23 +107,22 @@ public class MainActivity extends Activity {
      * لا يغيّر الرقم التسلسلي في النظام نفسه.
      */
     private String sanitizeReport(String text) {
-        String result = text;
+        StringBuilder result = new StringBuilder();
 
-        try {
-            String serial = Build.getSerial();
-            if (serial != null && !serial.isEmpty()
-                    && !"unknown".equalsIgnoreCase(serial)) {
-                result = result.replace(serial, "[HIDDEN]");
+        for (String line : text.split("\n", -1)) {
+            String lower = line.toLowerCase(Locale.US);
+
+            if (lower.contains("serialno")
+                    || lower.contains("serial_number")) {
+                result.append("[الرقم التسلسلي مخفي]");
+            } else {
+                result.append(line);
             }
-        } catch (SecurityException ignored) {
-            // لا يحتاج التطبيق إلى صلاحية خاصة لعرض التقرير.
-        } catch (Exception ignored) { }
 
-        result = result.replaceAll(
-                "(?im)^\\s*\\[?ro\\.boot\\.serialno\\]?\\s*:\\s*\\[?[^\\]\\r\\n]*\\]?\\s*$",
-                "[ro.boot.serialno]: [HIDDEN]");
+            result.append("\n");
+        }
 
-        return result;
+        return result.toString();
     }
 
     private void section(StringBuilder s, String name) {
