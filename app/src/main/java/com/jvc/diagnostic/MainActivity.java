@@ -485,7 +485,7 @@ public class MainActivity extends Activity {
             add(s, "Last update time", new SimpleDateFormat(
                     "yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date(pi.lastUpdateTime)));
 
-            if (Build.VERSION.SDK_INT >= 26) {
+            if (Build.VERSION.SDK_INT >= 30) {
                 try {
                     android.content.pm.InstallSourceInfo source = pm.getInstallSourceInfo(packageName);
                     add(s, "Installing package", source.getInstallingPackageName());
