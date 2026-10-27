@@ -217,6 +217,7 @@ public class MainActivity extends Activity {
 
         // تم تصحيح هذا الجزء بحيث يتم استدعاء الدالة مباشرة دون تكرار العنوان
         addCompatibilityInfo(s);
+        addAppUpdateCompatibilityAudit(s);
 
         section(s, "SENSORS");
         try {
@@ -818,6 +819,116 @@ public class MainActivity extends Activity {
 
         s.append("ملاحظة: هذه المعلومات لا تثبت توافق نظام بديل ")
                 .append("مع التلفزيون.\n");
+    }
+
+
+    /*
+     * تدقيق قراءة فقط لتوافق التطبيقات المثبتة مع إصدار Android ومعمارية الجهاز.
+     * لا ينزّل أو يثبّت أو يحدّث أي تطبيق، ولا يغيّر حالته.
+     */
+    private void addAppUpdateCompatibilityAudit(StringBuilder s) {
+        section(s, "APP UPDATE COMPATIBILITY AUDIT - READ ONLY");
+        add(s, "Device Android SDK", Build.VERSION.SDK_INT);
+        add(s, "Device Android release", Build.VERSION.RELEASE);
+        add(s, "Device supported ABIs", join(Build.SUPPORTED_ABIS));
+        s.append("هذا الفحص يقارن الحد الأدنى المعلن للتطبيق ومعماريات المكتبات الأصلية الموجودة في APK المثبت. لا يحدد وحده أحدث إصدار منشور على الإنترنت.\\n");
+
+        try {
+            PackageManager pm = getPackageManager();
+            List<PackageInfo> packages = pm.getInstalledPackages(0);
+            int compatibleSdk = 0;
+            int sdkTooNew = 0;
+            int nativeAbiMatch = 0;
+            int nativeAbiMismatch = 0;
+            int nativeUnknown = 0;
+
+            for (PackageInfo pi : packages) {
+                ApplicationInfo ai = pi.applicationInfo;
+                if (ai == null) continue;
+
+                int minSdk = 0;
+                if (Build.VERSION.SDK_INT >= 24) minSdk = ai.minSdkVersion;
+                int targetSdk = ai.targetSdkVersion;
+                boolean sdkCompatible = minSdk <= Build.VERSION.SDK_INT;
+                if (sdkCompatible) compatibleSdk++; else sdkTooNew++;
+
+                String nativeAbis = getApkNativeAbis(ai.sourceDir);
+                String abiResult;
+                if ("none".equals(nativeAbis)) {
+                    abiResult = "لا توجد مكتبات .so داخل APK";
+                } else if ("unknown".equals(nativeAbis)) {
+                    abiResult = "تعذر فحص المكتبات الأصلية";
+                    nativeUnknown++;
+                } else {
+                    boolean match = apkHasSupportedAbi(nativeAbis, Build.SUPPORTED_ABIS);
+                    abiResult = match ? "تطابق ABI موجود" : "لا يوجد تطابق ABI ظاهر";
+                    if (match) nativeAbiMatch++; else nativeAbiMismatch++;
+                }
+
+                CharSequence labelCs;
+                try { labelCs = pm.getApplicationLabel(ai); }
+                catch (Exception ignored) { labelCs = pi.packageName; }
+                String label = labelCs == null ? pi.packageName : labelCs.toString();
+
+                s.append("- app=").append(label.replace("\\n", " "))
+                        .append(" | package=").append(pi.packageName)
+                        .append(" | installedVersion=").append(pi.versionName == null ? "unknown" : pi.versionName)
+                        .append(" | minSdk=").append(minSdk)
+                        .append(" | targetSdk=").append(targetSdk)
+                        .append(" | Android7Check=").append(sdkCompatible ? "MIN-SDK OK" : "MIN-SDK TOO HIGH")
+                        .append(" | nativeLibraries=").append(nativeAbis)
+                        .append(" | ABI-check=").append(abiResult)
+                        .append("\\n");
+            }
+
+            add(s, "Apps whose minSdk is not above this Android version", compatibleSdk);
+            add(s, "Apps whose minSdk exceeds this Android version", sdkTooNew);
+            add(s, "Apps with a matching native ABI found", nativeAbiMatch);
+            add(s, "Apps with native libraries but no matching ABI found", nativeAbiMismatch);
+            add(s, "Apps whose native ABI check was unavailable", nativeUnknown);
+        } catch (Exception e) {
+            add(s, "App compatibility audit error", e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+
+        s.append("تنبيه: نجاح فحص minSdk وABI لا يضمن عمل التطبيق؛ قد توجد متطلبات خدمات Google أو ميزات تلفاز أو توقيع أو خادم.\\n");
+        s.append("لتحديد وجود تحديث أحدث، افحص صفحة التطبيق في متجر Google Play أو مصدر المطور الرسمي. لا تثبّت تحديثًا إذا اختلف توقيع المطور أو تعذّر التحقق من المصدر.\\n");
+    }
+
+    private String getApkNativeAbis(String apkPath) {
+        if (apkPath == null || apkPath.length() == 0) return "unknown";
+        java.util.zip.ZipFile zip = null;
+        try {
+            zip = new java.util.zip.ZipFile(apkPath);
+            java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zip.entries();
+            java.util.TreeSet<String> abis = new java.util.TreeSet<>();
+            while (entries.hasMoreElements()) {
+                String name = entries.nextElement().getName();
+                if (!name.startsWith("lib/") || !name.endsWith(".so")) continue;
+                String[] parts = name.split("/");
+                if (parts.length >= 3 && parts[1].length() > 0) abis.add(parts[1]);
+            }
+            if (abis.isEmpty()) return "none";
+            StringBuilder b = new StringBuilder();
+            for (String abi : abis) {
+                if (b.length() > 0) b.append(",");
+                b.append(abi);
+            }
+            return b.toString();
+        } catch (Exception e) {
+            return "unknown";
+        } finally {
+            if (zip != null) try { zip.close(); } catch (Exception ignored) { }
+        }
+    }
+
+    private boolean apkHasSupportedAbi(String apkAbis, String[] supportedAbis) {
+        if (apkAbis == null || supportedAbis == null) return false;
+        for (String supported : supportedAbis) {
+            for (String abi : apkAbis.split(",")) {
+                if (supported.equals(abi)) return true;
+            }
+        }
+        return false;
     }
 
     private void addUpdateRecoveryInfo(StringBuilder s) {
