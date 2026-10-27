@@ -608,7 +608,7 @@ public class MainActivity extends Activity {
                 add(s, "Declared providers", pi.providers.length);
                 for (android.content.pm.ProviderInfo info : pi.providers) {
                     appendComponent(s, "PROVIDER", info.name, info.exported,
-                            info.enabled, info.permission, info.processName,
+                            info.enabled, info.readPermission, info.processName,
                             info.directBootAware);
                     add(s, "  provider-authority", info.authority);
                     add(s, "  provider-read-permission", info.readPermission);
