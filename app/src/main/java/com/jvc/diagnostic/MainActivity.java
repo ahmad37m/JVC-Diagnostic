@@ -335,6 +335,7 @@ public class MainActivity extends Activity {
         }
 
         addTargetPackageDetails(s, "com.example.user.myapplication");
+        addTargetComponentDetails(s, "com.example.user.myapplication");
 
         section(s, "HOME ACTIVITIES");
         try {
@@ -556,6 +557,88 @@ public class MainActivity extends Activity {
             add(s, "Target package inspection error",
                     e.getClass().getSimpleName() + ": " + e.getMessage());
         }
+    }
+
+    /*
+     * جرد قراءة فقط لمكونات الحزمة: الأنشطة والخدمات والمستقبلات ومزودات المحتوى.
+     * لا يتم تشغيل أي مكون أو تعديل حالته.
+     */
+    private void addTargetComponentDetails(StringBuilder s, String packageName) {
+        section(s, "TARGET PACKAGE COMPONENTS - READ ONLY");
+        try {
+            PackageManager pm = getPackageManager();
+            int flags = PackageManager.GET_ACTIVITIES
+                    | PackageManager.GET_SERVICES
+                    | PackageManager.GET_RECEIVERS
+                    | PackageManager.GET_PROVIDERS;
+            PackageInfo pi = pm.getPackageInfo(packageName, flags);
+            int count = 0;
+
+            if (pi.activities != null) {
+                add(s, "Declared activities", pi.activities.length);
+                for (android.content.pm.ActivityInfo info : pi.activities) {
+                    appendComponent(s, "ACTIVITY", info.name, info.exported,
+                            info.enabled, info.permission, info.processName,
+                            info.directBootAware);
+                    count++;
+                }
+            } else add(s, "Declared activities", 0);
+
+            if (pi.services != null) {
+                add(s, "Declared services", pi.services.length);
+                for (android.content.pm.ServiceInfo info : pi.services) {
+                    appendComponent(s, "SERVICE", info.name, info.exported,
+                            info.enabled, info.permission, info.processName,
+                            info.directBootAware);
+                    count++;
+                }
+            } else add(s, "Declared services", 0);
+
+            if (pi.receivers != null) {
+                add(s, "Declared receivers", pi.receivers.length);
+                for (android.content.pm.ActivityInfo info : pi.receivers) {
+                    appendComponent(s, "RECEIVER", info.name, info.exported,
+                            info.enabled, info.permission, info.processName,
+                            info.directBootAware);
+                    count++;
+                }
+            } else add(s, "Declared receivers", 0);
+
+            if (pi.providers != null) {
+                add(s, "Declared providers", pi.providers.length);
+                for (android.content.pm.ProviderInfo info : pi.providers) {
+                    appendComponent(s, "PROVIDER", info.name, info.exported,
+                            info.enabled, info.permission, info.processName,
+                            info.directBootAware);
+                    add(s, "  provider-authority", info.authority);
+                    add(s, "  provider-read-permission", info.readPermission);
+                    add(s, "  provider-write-permission", info.writePermission);
+                    count++;
+                }
+            } else add(s, "Declared providers", 0);
+
+            add(s, "Total declared components", count);
+            s.append("ملاحظة: وجود مكون أو كونه exported لا يثبت وحده أنه ضار؛ يلزم تقييم الوظيفة والصلاحيات والسياق.\\n");
+        } catch (PackageManager.NameNotFoundException e) {
+            add(s, "Component inspection", "الحزمة غير موجودة أو غير ظاهرة");
+        } catch (Exception e) {
+            add(s, "Component inspection error",
+                    e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    private void appendComponent(StringBuilder s, String type, String name,
+                                 boolean exported, boolean enabled,
+                                 String permission, String process,
+                                 boolean directBootAware) {
+        s.append("- type=").append(type)
+                .append(" | name=").append(name == null ? "unknown" : name)
+                .append(" | exported=").append(exported)
+                .append(" | enabled=").append(enabled)
+                .append(" | permission=").append(permission == null ? "none" : permission)
+                .append(" | process=").append(process == null ? "unknown" : process)
+                .append(" | directBootAware=").append(directBootAware)
+                .append("\\n");
     }
 
     private String join(String[] values) {
