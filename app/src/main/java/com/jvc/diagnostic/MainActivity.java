@@ -484,7 +484,7 @@ public class MainActivity extends Activity {
             add(s, "Process name", ai.processName);
             add(s, "Target SDK", ai.targetSdkVersion);
             add(s, "Application flags (hex)", "0x" + Integer.toHexString(ai.flags).toUpperCase(Locale.US));
-            add(s, "Direct Boot aware", ai.isDirectBootAware());
+            add(s, "Direct Boot aware", (ai.flags & ApplicationInfo.FLAG_DIRECT_BOOT_AWARE) != 0);
             add(s, "Shared user ID", pi.sharedUserId == null ? "غير محدد" : pi.sharedUserId);
             add(s, "First install time", new SimpleDateFormat(
                     "yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date(pi.firstInstallTime)));
