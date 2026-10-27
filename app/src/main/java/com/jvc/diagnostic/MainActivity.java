@@ -265,8 +265,8 @@ public class MainActivity extends Activity {
         }
 
         section(s, "ALL INSTALLED PACKAGES - FULL INVENTORY");
-        s.append("يشمل الحزم التي يعرضها PackageManager، بما فيها حزم النظام التي لا تظهر في الشاشة الرئيسية.\\n");
-        s.append("لا يتطلب هذا الفحص تعطيل التطبيقات أو تغيير إعدادات التلفزيون.\\n");
+        s.append("يشمل الحزم التي يعرضها PackageManager، بما فيها حزم النظام التي لا تظهر في الشاشة الرئيسية.\n");
+        s.append("لا يتطلب هذا الفحص تعطيل التطبيقات أو تغيير إعدادات التلفزيون.\n");
         try {
             PackageManager pm = getPackageManager();
             List<PackageInfo> packages = pm.getInstalledPackages(0);
@@ -315,13 +315,13 @@ public class MainActivity extends Activity {
                     label = "(label unavailable)";
                 }
 
-                s.append("- name=").append(label.replace("\\n", " ").replace("\\r", " "))
+                s.append("- name=").append(label.replace("\n", " ").replace("\\r", " "))
                         .append(" | package=").append(pi.packageName)
                         .append(" | version=").append(pi.versionName == null ? "unknown" : pi.versionName)
                         .append(" | versionCode=").append(pi.versionCode)
                         .append(" | type=").append(type)
                         .append(" | state=").append(enabledState)
-                        .append("\\n");
+                        .append("\n");
             }
 
             add(s, "System packages", systemCount);
@@ -502,7 +502,7 @@ public class MainActivity extends Activity {
             add(s, "Requested permission count", requested == null ? 0 : requested.length);
             if (requested != null) {
                 for (String permission : requested) {
-                    s.append("- requested-permission=").append(permission).append("\\n");
+                    s.append("- requested-permission=").append(permission).append("\n");
                 }
             }
 
@@ -513,13 +513,13 @@ public class MainActivity extends Activity {
                 List<ResolveInfo> homeActivities = pm.queryIntentActivities(homeIntent, 0);
                 add(s, "HOME activities in target package", homeActivities.size());
                 for (ResolveInfo r : homeActivities) {
-                    s.append("- HOME activity=").append(r.activityInfo.name).append("\\n");
+                    s.append("- HOME activity=").append(r.activityInfo.name).append("\n");
                 }
             } catch (Exception e) {
                 add(s, "Target HOME activity check", e.getClass().getSimpleName());
             }
 
-            s.append("ملاحظة: مسار system app وحده لا يثبت أن التطبيق آمن أو ضار.\\n");
+            s.append("ملاحظة: مسار system app وحده لا يثبت أن التطبيق آمن أو ضار.\n");
         } catch (PackageManager.NameNotFoundException e) {
             add(s, "Target package result", "الحزمة غير موجودة أو غير ظاهرة لـ PackageManager");
         } catch (Exception e) {
