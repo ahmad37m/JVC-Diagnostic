@@ -831,7 +831,7 @@ public class MainActivity extends Activity {
         add(s, "Device Android SDK", Build.VERSION.SDK_INT);
         add(s, "Device Android release", Build.VERSION.RELEASE);
         add(s, "Device supported ABIs", join(Build.SUPPORTED_ABIS));
-        s.append("هذا الفحص يقارن الحد الأدنى المعلن للتطبيق ومعماريات المكتبات الأصلية الموجودة في APK المثبت. لا يحدد وحده أحدث إصدار منشور على الإنترنت.\\n");
+        s.append("هذا الفحص يقارن الحد الأدنى المعلن للتطبيق ومعماريات المكتبات الأصلية الموجودة في APK المثبت. لا يحدد وحده أحدث إصدار منشور على الإنترنت.\n");
 
         try {
             PackageManager pm = getPackageManager();
@@ -870,7 +870,7 @@ public class MainActivity extends Activity {
                 catch (Exception ignored) { labelCs = pi.packageName; }
                 String label = labelCs == null ? pi.packageName : labelCs.toString();
 
-                s.append("- app=").append(label.replace("\\n", " "))
+                s.append("- app=").append(label.replace("\n", " "))
                         .append(" | package=").append(pi.packageName)
                         .append(" | installedVersion=").append(pi.versionName == null ? "unknown" : pi.versionName)
                         .append(" | minSdk=").append(minSdk)
@@ -878,7 +878,7 @@ public class MainActivity extends Activity {
                         .append(" | Android7Check=").append(sdkCompatible ? "MIN-SDK OK" : "MIN-SDK TOO HIGH")
                         .append(" | nativeLibraries=").append(nativeAbis)
                         .append(" | ABI-check=").append(abiResult)
-                        .append("\\n");
+                        .append("\n");
             }
 
             add(s, "Apps whose minSdk is not above this Android version", compatibleSdk);
@@ -890,8 +890,8 @@ public class MainActivity extends Activity {
             add(s, "App compatibility audit error", e.getClass().getSimpleName() + ": " + e.getMessage());
         }
 
-        s.append("تنبيه: نجاح فحص minSdk وABI لا يضمن عمل التطبيق؛ قد توجد متطلبات خدمات Google أو ميزات تلفاز أو توقيع أو خادم.\\n");
-        s.append("لتحديد وجود تحديث أحدث، افحص صفحة التطبيق في متجر Google Play أو مصدر المطور الرسمي. لا تثبّت تحديثًا إذا اختلف توقيع المطور أو تعذّر التحقق من المصدر.\\n");
+        s.append("تنبيه: نجاح فحص minSdk وABI لا يضمن عمل التطبيق؛ قد توجد متطلبات خدمات Google أو ميزات تلفاز أو توقيع أو خادم.\n");
+        s.append("لتحديد وجود تحديث أحدث، افحص صفحة التطبيق في متجر Google Play أو مصدر المطور الرسمي. لا تثبّت تحديثًا إذا اختلف توقيع المطور أو تعذّر التحقق من المصدر.\n");
     }
 
     private String getApkNativeAbis(String apkPath) {
