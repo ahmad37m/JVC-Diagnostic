@@ -1,0 +1,13 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.jvc.androidtvlab'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.jvc.androidtvlab'
+        minSdk 24
+        targetSdk 28
+        versionCode 1
+        versionName '0.1.0'
+    }
+}
