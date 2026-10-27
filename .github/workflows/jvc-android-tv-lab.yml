@@ -1,0 +1,36 @@
+name: Build JVC Android TV Lab APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'jvc-android-tv-lab/**'
+      - '.github/workflows/jvc-android-tv-lab.yml'
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Validate manifest
+        run: python3 -c "import xml.etree.ElementTree as E; E.parse('jvc-android-tv-lab/app/src/main/AndroidManifest.xml')"
+      - name: Build debug APK
+        working-directory: jvc-android-tv-lab
+        run: gradle assembleDebug --stacktrace
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: JVC-Android-TV-Lab-debug
+          path: jvc-android-tv-lab/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
