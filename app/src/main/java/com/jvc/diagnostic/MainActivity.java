@@ -333,6 +333,8 @@ public class MainActivity extends Activity {
                     + ": " + e.getMessage());
         }
 
+        addTargetPackageDetails(s, "com.example.user.myapplication");
+
         section(s, "HOME ACTIVITIES");
         try {
             PackageManager pm = getPackageManager();
@@ -444,6 +446,86 @@ public class MainActivity extends Activity {
         s.append("التقرير لا يثبت توافق أي نظام بديل.\n");
 
         return s.toString();
+    }
+
+    /*
+     * تفاصيل قراءة فقط للحزمة محل الفحص. لا يتم تشغيلها أو تعطيلها أو تعديلها.
+     */
+    private void addTargetPackageDetails(StringBuilder s, String packageName) {
+        section(s, "TARGET PACKAGE DETAILS - READ ONLY");
+        add(s, "Target package", packageName);
+        try {
+            PackageManager pm = getPackageManager();
+            PackageInfo pi = pm.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS);
+            ApplicationInfo ai = pi.applicationInfo;
+
+            String label;
+            try {
+                CharSequence appLabel = pm.getApplicationLabel(ai);
+                label = appLabel == null ? "(no label)" : appLabel.toString();
+            } catch (Exception e) {
+                label = "(label unavailable)";
+            }
+
+            add(s, "Application label", label);
+            add(s, "Version name", pi.versionName == null ? "unknown" : pi.versionName);
+            add(s, "Version code", pi.versionCode);
+            add(s, "System app flag", (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0);
+            add(s, "Updated system app flag",
+                    (ai.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0);
+            add(s, "Application enabled", ai.enabled);
+            add(s, "Enabled setting", pm.getApplicationEnabledSetting(packageName));
+            add(s, "Install source directory", ai.sourceDir);
+            add(s, "Public source directory", ai.publicSourceDir);
+            add(s, "Native library directory", ai.nativeLibraryDir);
+            add(s, "Data directory", ai.dataDir);
+            add(s, "UID", ai.uid);
+            add(s, "First install time", new SimpleDateFormat(
+                    "yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date(pi.firstInstallTime)));
+            add(s, "Last update time", new SimpleDateFormat(
+                    "yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date(pi.lastUpdateTime)));
+
+            if (Build.VERSION.SDK_INT >= 26) {
+                try {
+                    android.content.pm.InstallSourceInfo source = pm.getInstallSourceInfo(packageName);
+                    add(s, "Installing package", source.getInstallingPackageName());
+                    add(s, "Initiating package", source.getInitiatingPackageName());
+                    add(s, "Originating package", source.getOriginatingPackageName());
+                } catch (Exception e) {
+                    add(s, "Install source details", "غير متاح: " + e.getClass().getSimpleName());
+                }
+            } else {
+                add(s, "Installer package", pm.getInstallerPackageName(packageName));
+            }
+
+            String[] requested = pi.requestedPermissions;
+            add(s, "Requested permission count", requested == null ? 0 : requested.length);
+            if (requested != null) {
+                for (String permission : requested) {
+                    s.append("- requested-permission=").append(permission).append("\\n");
+                }
+            }
+
+            try {
+                Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+                homeIntent.addCategory(Intent.CATEGORY_HOME);
+                homeIntent.setPackage(packageName);
+                List<ResolveInfo> homeActivities = pm.queryIntentActivities(homeIntent, 0);
+                add(s, "HOME activities in target package", homeActivities.size());
+                for (ResolveInfo r : homeActivities) {
+                    s.append("- HOME activity=").append(r.activityInfo.name).append("\\n");
+                }
+            } catch (Exception e) {
+                add(s, "Target HOME activity check", e.getClass().getSimpleName());
+            }
+
+            s.append("ملاحظة: مسار system app وحده لا يثبت أن التطبيق آمن أو ضار.\\n");
+        } catch (PackageManager.NameNotFoundException e) {
+            add(s, "Target package result", "الحزمة غير موجودة أو غير ظاهرة لـ PackageManager");
+        } catch (Exception e) {
+            add(s, "Target package inspection error",
+                    e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
     }
 
     private String join(String[] values) {
