@@ -481,6 +481,11 @@ public class MainActivity extends Activity {
             add(s, "Native library directory", ai.nativeLibraryDir);
             add(s, "Data directory", ai.dataDir);
             add(s, "UID", ai.uid);
+            add(s, "Process name", ai.processName);
+            add(s, "Target SDK", ai.targetSdkVersion);
+            add(s, "Application flags (hex)", "0x" + Integer.toHexString(ai.flags).toUpperCase(Locale.US));
+            add(s, "Direct Boot aware", ai.isDirectBootAware());
+            add(s, "Shared user ID", pi.sharedUserId == null ? "غير محدد" : pi.sharedUserId);
             add(s, "First install time", new SimpleDateFormat(
                     "yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date(pi.firstInstallTime)));
             add(s, "Last update time", new SimpleDateFormat(
@@ -520,8 +525,14 @@ public class MainActivity extends Activity {
             String[] requested = pi.requestedPermissions;
             add(s, "Requested permission count", requested == null ? 0 : requested.length);
             if (requested != null) {
-                for (String permission : requested) {
-                    s.append("- requested-permission=").append(permission).append("\n");
+                for (int i = 0; i < requested.length; i++) {
+                    String permission = requested[i];
+                    boolean granted = pi.requestedPermissionsFlags != null
+                            && i < pi.requestedPermissionsFlags.length
+                            && (pi.requestedPermissionsFlags[i]
+                            & PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0;
+                    s.append("- requested-permission=").append(permission)
+                            .append(" | granted=").append(granted).append("\n");
                 }
             }
 
