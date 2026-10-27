@@ -39,6 +39,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
@@ -456,7 +457,7 @@ public class MainActivity extends Activity {
         add(s, "Target package", packageName);
         try {
             PackageManager pm = getPackageManager();
-            PackageInfo pi = pm.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS);
+            PackageInfo pi = pm.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS | PackageManager.GET_SIGNATURES);
             ApplicationInfo ai = pi.applicationInfo;
 
             String label;
@@ -496,6 +497,24 @@ public class MainActivity extends Activity {
                 }
             } else {
                 add(s, "Installer package", pm.getInstallerPackageName(packageName));
+            }
+
+            if (pi.signatures != null && pi.signatures.length > 0) {
+                for (int i = 0; i < pi.signatures.length; i++) {
+                    try {
+                        byte[] digest = MessageDigest.getInstance("SHA-256")
+                                .digest(pi.signatures[i].toByteArray());
+                        StringBuilder hex = new StringBuilder();
+                        for (byte b : digest) {
+                            hex.append(String.format(Locale.US, "%02X", b & 0xFF));
+                        }
+                        add(s, "Signing certificate SHA-256 #" + (i + 1), hex.toString());
+                    } catch (Exception e) {
+                        add(s, "Signing certificate SHA-256 #" + (i + 1), "غير متاح");
+                    }
+                }
+            } else {
+                add(s, "Signing certificate SHA-256", "غير متاح");
             }
 
             String[] requested = pi.requestedPermissions;
