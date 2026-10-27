@@ -264,6 +264,75 @@ public class MainActivity extends Activity {
             add(s, "App list error", e.toString());
         }
 
+        section(s, "ALL INSTALLED PACKAGES - FULL INVENTORY");
+        s.append("يشمل الحزم التي يعرضها PackageManager، بما فيها حزم النظام التي لا تظهر في الشاشة الرئيسية.\\n");
+        s.append("لا يتطلب هذا الفحص تعطيل التطبيقات أو تغيير إعدادات التلفزيون.\\n");
+        try {
+            PackageManager pm = getPackageManager();
+            List<PackageInfo> packages = pm.getInstalledPackages(0);
+            int enabledCount = 0;
+            int disabledCount = 0;
+            int systemCount = 0;
+            int userCount = 0;
+            add(s, "Installed package count", packages.size());
+
+            for (PackageInfo pi : packages) {
+                ApplicationInfo ai = pi.applicationInfo;
+                if (ai == null) continue;
+
+                boolean isSystem = (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+                boolean isUpdatedSystem = (ai.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
+                String type = isSystem
+                        ? (isUpdatedSystem ? "SYSTEM (UPDATED)" : "SYSTEM")
+                        : "USER";
+
+                int enabledSetting;
+                String enabledState;
+                try {
+                    enabledSetting = pm.getApplicationEnabledSetting(pi.packageName);
+                    if (enabledSetting == PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                            || enabledSetting == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER
+                            || enabledSetting == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_UNTIL_USED) {
+                        enabledState = "DISABLED";
+                    } else if (enabledSetting == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+                        enabledState = "ENABLED";
+                    } else {
+                        enabledState = ai.enabled ? "ENABLED (DEFAULT)" : "DISABLED (DEFAULT)";
+                    }
+                } catch (Exception ignored) {
+                    enabledState = ai.enabled ? "ENABLED (APP INFO)" : "DISABLED (APP INFO)";
+                }
+
+                if (enabledState.startsWith("ENABLED")) enabledCount++;
+                else disabledCount++;
+                if (isSystem) systemCount++; else userCount++;
+
+                String label;
+                try {
+                    CharSequence appLabel = pm.getApplicationLabel(ai);
+                    label = appLabel == null ? "(no label)" : appLabel.toString();
+                } catch (Exception ignored) {
+                    label = "(label unavailable)";
+                }
+
+                s.append("- name=").append(label.replace("\\n", " ").replace("\\r", " "))
+                        .append(" | package=").append(pi.packageName)
+                        .append(" | version=").append(pi.versionName == null ? "unknown" : pi.versionName)
+                        .append(" | versionCode=").append(pi.versionCode)
+                        .append(" | type=").append(type)
+                        .append(" | state=").append(enabledState)
+                        .append("\\n");
+            }
+
+            add(s, "System packages", systemCount);
+            add(s, "User packages", userCount);
+            add(s, "Enabled packages", enabledCount);
+            add(s, "Disabled packages", disabledCount);
+        } catch (Exception e) {
+            add(s, "Installed package inventory error", e.getClass().getSimpleName()
+                    + ": " + e.getMessage());
+        }
+
         section(s, "HOME ACTIVITIES");
         try {
             PackageManager pm = getPackageManager();
