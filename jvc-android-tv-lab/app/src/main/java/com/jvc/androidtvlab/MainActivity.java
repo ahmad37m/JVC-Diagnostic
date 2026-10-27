@@ -1,21 +1,26 @@
 package com.jvc.androidtvlab;
 
 import android.app.Activity;
+import android.app.ActivityManager;
+import android.content.Context;
+import android.content.pm.ConfigurationInfo;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
-import android.content.pm.PackageManager;
-import android.view.Gravity;
+import android.os.Environment;
+import android.os.StatFs;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import java.io.File;
+import java.util.Locale;
 
 /**
- * Safe first-stage shell for JVC Android TV Lab.
- * It never changes the launcher, disables packages, writes system settings,
- * or attempts to boot/virtualize another OS.
+ * Safe diagnostics for JVC Android TV.
+ * Does not change the launcher, disable packages, write system settings,
+ * request elevated permissions, or attempt to boot/virtualize another OS.
  */
 public class MainActivity extends Activity {
     private LinearLayout content;
@@ -61,33 +66,73 @@ public class MainActivity extends Activity {
         setContentView(root);
     }
 
+    private String gib(long bytes) {
+        return String.format(Locale.US, "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+    }
+
     private void showHome() {
         base("مختبر التلفزيون");
-        content.addView(text("واجهة تجريبية آمنة تعمل كتطبيق داخل النظام الأصلي.", 19));
-        content.addView(text("لا تغيّر المشغّل الأصلي ولا تعطّل التطبيقات ولا تعدّل إعدادات النظام.", 16));
-        content.addView(button("فحص توافق الجهاز", this::showCompatibility));
+        content.addView(text("المرحلة التالية: فحص الموارد وإمكانات تشغيل التطبيقات، لا إعادة تقرير Android الأساسي.", 19));
+        content.addView(text("هذا التطبيق لا يغيّر النظام أو المشغّل، ولا يعطّل التطبيقات، ولا يحتاج إلى ADB.", 16));
+        content.addView(button("فحص الموارد وإمكانات التشغيل", this::showResources));
         content.addView(button("حدود تشغيل نظام Android مستقل", this::showLimits));
         content.addView(button("الرجوع إلى الواجهة الرئيسية", this::showHome));
     }
 
-    private void showCompatibility() {
-        base("تقرير التوافق");
-        content.addView(text("إصدار Android: " + Build.VERSION.RELEASE +
-            " (API " + Build.VERSION.SDK_INT + ")", 19));
-        content.addView(text("الشركة: " + Build.MANUFACTURER, 17));
-        content.addView(text("الجهاز: " + Build.MODEL, 17));
-        content.addView(text("المنتج: " + Build.PRODUCT, 17));
-        content.addView(text("المعمارية: " + (Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "غير معروفة"), 17));
-        content.addView(text("الذاكرة الكلية التقريبية: " +
-            (getSystemService(ACTIVITY_SERVICE) != null ? "راجع تقرير التشخيص المرفق" : "غير متاحة"), 16));
-        content.addView(text("هذا الفحص يقرأ معلومات عامة فقط؛ لا يغيّر إعدادات التلفزيون.", 16));
+    private void showResources() {
+        base("فحص الموارد");
+        ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        if (am != null) {
+            ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+            am.getMemoryInfo(mi);
+            content.addView(text("RAM الكلية: " + gib(mi.totalMem), 18));
+            content.addView(text("RAM المتاحة الآن: " + gib(mi.availMem), 18));
+            content.addView(text("عتبة انخفاض الذاكرة: " + gib(mi.threshold), 16));
+            content.addView(text("ذاكرة التطبيق القصوى التقريبية: " + am.getMemoryClass() + " MB", 16));
+            content.addView(text("النظام يعتبر الذاكرة منخفضة: " + (mi.lowMemory ? "نعم" : "لا"), 16));
+            ConfigurationInfo ci = am.getDeviceConfigurationInfo();
+            if (ci != null) {
+                int gl = ci.reqGlEsVersion;
+                content.addView(text(String.format(Locale.US, "OpenGL ES المعلن: %d.%d", (gl >> 16), (gl & 0xffff)), 16));
+            } else {
+                content.addView(text("OpenGL ES: لم يعلن النظام عن القيمة", 16));
+            }
+        } else {
+            content.addView(text("تعذر قراءة خدمة إدارة الذاكرة.", 16));
+        }
+
+        File data = Environment.getDataDirectory();
+        try {
+            StatFs s = new StatFs(data.getAbsolutePath());
+            long total = s.getBlockCountLong() * s.getBlockSizeLong();
+            long free = s.getAvailableBlocksLong() * s.getBlockSizeLong();
+            content.addView(text("مساحة قسم البيانات: " + gib(total), 18));
+            content.addView(text("المساحة المتاحة للمستخدم: " + gib(free), 18));
+        } catch (Exception e) {
+            content.addView(text("تعذر قراءة مساحة التخزين: " + e.getClass().getSimpleName(), 16));
+        }
+
+        content.addView(text("عدد أنوية المعالج التي يعرضها النظام: " + Runtime.getRuntime().availableProcessors(), 16));
+        content.addView(text("معماريات النظام المدعومة: " + join(Build.SUPPORTED_ABIS), 16));
+        content.addView(text("إصدار Android: " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")", 16));
+        content.addView(text("هذا الفحص يقرأ موارد النظام فقط. لا يثبت إمكانية تشغيل Android ثانٍ؛ نحتاج لاحقًا إلى دليل على دعم محرك افتراضي متوافق مع الجهاز.", 17));
         content.addView(button("عودة", this::showHome));
+    }
+
+    private String join(String[] values) {
+        if (values == null || values.length == 0) return "غير معروفة";
+        StringBuilder out = new StringBuilder();
+        for (String value : values) {
+            if (out.length() > 0) out.append(", ");
+            out.append(value);
+        }
+        return out.toString();
     }
 
     private void showLimits() {
         base("تشغيل نظام مستقل");
         content.addView(text("التطبيق العادي لا يستطيع تشغيل نظام Android ثانٍ بمفرده.", 20));
-        content.addView(text("يلزم محرك افتراضي أو بيئة تشغيل متوافقة مع النواة والصلاحيات. في هذا التلفزيون: Android 7، وذاكرة تقارب 0.78 GB، ومعمارية 32-bit، ومحمل إقلاع مقفل. لذلك لم تثبت إمكانية تشغيل نظام ضيف حتى الآن.", 17));
+        content.addView(text("يلزم محرك افتراضي أو بيئة تشغيل متوافقة مع النواة والصلاحيات. معلومات الجهاز الحالية تشير إلى Android 7 وذاكرة محدودة ومحمل إقلاع مقفل؛ لذلك لم تثبت إمكانية تشغيل نظام ضيف حتى الآن.", 17));
         content.addView(text("هذه النسخة لا تحاول الروت أو فتح محمل الإقلاع أو تثبيت نظام أو تعديل أقسام الجهاز.", 17));
         content.addView(button("عودة", this::showHome));
     }
